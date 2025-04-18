@@ -40,6 +40,9 @@ def init_pipeline():
         adapter_name="subject",
     )
 
+    # Optional: Load additional LoRA weights
+    #pipe.load_lora_weights("XLabs-AI/flux-RealismLora", adapter_name="realism")
+
 
 def process_image_and_text(image, text):
     # center crop image

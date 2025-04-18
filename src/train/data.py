@@ -6,7 +6,7 @@ import torchvision.transforms as T
 import random
 
 
-class Subject200KDateset(Dataset):
+class Subject200KDataset(Dataset):
     def __init__(
         self,
         base_dataset,
@@ -107,6 +107,7 @@ class ImageConditionDataset(Dataset):
         drop_text_prob: float = 0.1,
         drop_image_prob: float = 0.1,
         return_pil_image: bool = False,
+        position_scale=1.0,
     ):
         self.base_dataset = base_dataset
         self.condition_size = condition_size
@@ -115,6 +116,7 @@ class ImageConditionDataset(Dataset):
         self.drop_text_prob = drop_text_prob
         self.drop_image_prob = drop_image_prob
         self.return_pil_image = return_pil_image
+        self.position_scale = position_scale
 
         self.to_tensor = T.ToTensor()
 
@@ -148,13 +150,21 @@ class ImageConditionDataset(Dataset):
         image = image.resize((self.target_size, self.target_size)).convert("RGB")
         description = self.base_dataset[idx]["json"]["prompt"]
 
+        enable_scale = random.random() < 1
+        if not enable_scale:
+            condition_size = int(self.condition_size * self.position_scale)
+            position_scale = 1.0
+        else:
+            condition_size = self.condition_size
+            position_scale = self.position_scale
+
         # Get the condition image
         position_delta = np.array([0, 0])
         if self.condition_type == "canny":
             condition_img = self._get_canny_edge(image)
         elif self.condition_type == "coloring":
             condition_img = (
-                image.resize((self.condition_size, self.condition_size))
+                image.resize((condition_size, condition_size))
                 .convert("L")
                 .convert("RGB")
             )
@@ -162,20 +172,21 @@ class ImageConditionDataset(Dataset):
             blur_radius = random.randint(1, 10)
             condition_img = (
                 image.convert("RGB")
-                .resize((self.condition_size, self.condition_size))
                 .filter(ImageFilter.GaussianBlur(blur_radius))
+                .resize((condition_size, condition_size))
                 .convert("RGB")
             )
         elif self.condition_type == "depth":
             condition_img = self.depth_pipe(image)["depth"].convert("RGB")
+            condition_img = condition_img.resize((condition_size, condition_size))
         elif self.condition_type == "depth_pred":
             condition_img = image
             image = self.depth_pipe(condition_img)["depth"].convert("RGB")
             description = f"[depth] {description}"
         elif self.condition_type == "fill":
-            condition_img = image.resize(
-                (self.condition_size, self.condition_size)
-            ).convert("RGB")
+            condition_img = image.resize((condition_size, condition_size)).convert(
+                "RGB"
+            )
             w, h = image.size
             x1, x2 = sorted([random.randint(0, w), random.randint(0, w)])
             y1, y2 = sorted([random.randint(0, h), random.randint(0, h)])
@@ -188,13 +199,109 @@ class ImageConditionDataset(Dataset):
                 image, Image.new("RGB", image.size, (0, 0, 0)), mask
             )
         elif self.condition_type == "sr":
-            condition_img = image.resize(
-                (self.condition_size, self.condition_size)
-            ).convert("RGB")
-            position_delta = np.array([0, -self.condition_size // 16])
+            condition_img = image.resize((condition_size, condition_size)).convert(
+                "RGB"
+            )
+            position_delta = np.array([0, -condition_size // 16])
 
         else:
             raise ValueError(f"Condition type {self.condition_type} not implemented")
+
+        # Randomly drop text or image
+        drop_text = random.random() < self.drop_text_prob
+        drop_image = random.random() < self.drop_image_prob
+        if drop_text:
+            description = ""
+        if drop_image:
+            condition_img = Image.new(
+                "RGB", (condition_size, condition_size), (0, 0, 0)
+            )
+
+        return {
+            "image": self.to_tensor(image),
+            "condition": self.to_tensor(condition_img),
+            "condition_type": self.condition_type,
+            "description": description,
+            "position_delta": position_delta,
+            **({"pil_image": [image, condition_img]} if self.return_pil_image else {}),
+            **({"position_scale": position_scale} if position_scale != 1.0 else {}),
+        }
+
+
+class CartoonDataset(Dataset):
+    def __init__(
+        self,
+        base_dataset,
+        condition_size: int = 1024,
+        target_size: int = 1024,
+        image_size: int = 1024,
+        padding: int = 0,
+        condition_type: str = "cartoon",
+        drop_text_prob: float = 0.1,
+        drop_image_prob: float = 0.1,
+        return_pil_image: bool = False,
+    ):
+        self.base_dataset = base_dataset
+        self.condition_size = condition_size
+        self.target_size = target_size
+        self.image_size = image_size
+        self.padding = padding
+        self.condition_type = condition_type
+        self.drop_text_prob = drop_text_prob
+        self.drop_image_prob = drop_image_prob
+        self.return_pil_image = return_pil_image
+
+        self.to_tensor = T.ToTensor()
+
+    def __len__(self):
+        return len(self.base_dataset)
+
+    def __getitem__(self, idx):
+        data = self.base_dataset[idx]
+        condition_img = data["condition"]
+        target_image = data["target"]
+
+        # Tag
+        tag = data["tags"][0]
+
+        target_description = data["target_description"]
+
+        description = {
+            "lion": "lion like animal",
+            "bear": "bear like animal",
+            "gorilla": "gorilla like animal",
+            "dog": "dog like animal",
+            "elephant": "elephant like animal",
+            "eagle": "eagle like bird",
+            "tiger": "tiger like animal",
+            "owl": "owl like bird",
+            "woman": "woman",
+            "parrot": "parrot like bird",
+            "mouse": "mouse like animal",
+            "man": "man",
+            "pigeon": "pigeon like bird",
+            "girl": "girl",
+            "panda": "panda like animal",
+            "crocodile": "crocodile like animal",
+            "rabbit": "rabbit like animal",
+            "boy": "boy",
+            "monkey": "monkey like animal",
+            "cat": "cat like animal",
+        }
+
+        # Resize the image
+        condition_img = condition_img.resize(
+            (self.condition_size, self.condition_size)
+        ).convert("RGB")
+        target_image = target_image.resize(
+            (self.target_size, self.target_size)
+        ).convert("RGB")
+
+        # Process datum to create description
+        description = data.get(
+            "description",
+            f"Photo of a {description[tag]} cartoon character in a white background. Character is facing {target_description['facing_direction']}. Character pose is {target_description['pose']}.",
+        )
 
         # Randomly drop text or image
         drop_text = random.random() < self.drop_text_prob
@@ -207,10 +314,10 @@ class ImageConditionDataset(Dataset):
             )
 
         return {
-            "image": self.to_tensor(image),
+            "image": self.to_tensor(target_image),
             "condition": self.to_tensor(condition_img),
             "condition_type": self.condition_type,
             "description": description,
-            "position_delta": position_delta,
-            **({"pil_image": [image, condition_img]} if self.return_pil_image else {}),
+            # 16 is the downscale factor of the image
+            "position_delta": np.array([0, -16]),
         }

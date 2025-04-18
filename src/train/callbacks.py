@@ -99,6 +99,7 @@ class TrainingCallback(L.Callback):
         # TODO: change this two variables to parameters
         condition_size = trainer.training_config["dataset"]["condition_size"]
         target_size = trainer.training_config["dataset"]["target_size"]
+        position_scale = trainer.training_config["dataset"].get("position_scale", 1.0)
 
         generator = torch.Generator(device=pl_module.device)
         generator.manual_seed(42)
@@ -127,7 +128,14 @@ class TrainingCallback(L.Callback):
             condition_img = np.array(condition_img)
             condition_img = cv2.Canny(condition_img, 100, 200)
             condition_img = Image.fromarray(condition_img).convert("RGB")
-            test_list.append((condition_img, [0, 0], "A beautiful vase on a table."))
+            test_list.append(
+                (
+                    condition_img,
+                    [0, 0],
+                    "A beautiful vase on a table.",
+                    {"position_scale": position_scale} if position_scale != 1.0 else {},
+                )
+            )
         elif condition_type == "coloring":
             condition_img = (
                 Image.open("assets/vase_hq.jpg")
@@ -149,7 +157,14 @@ class TrainingCallback(L.Callback):
                 .convert("RGB")
             )
             condition_img = self.deepth_pipe(condition_img)["depth"].convert("RGB")
-            test_list.append((condition_img, [0, 0], "A beautiful vase on a table."))
+            test_list.append(
+                (
+                    condition_img,
+                    [0, 0],
+                    "A beautiful vase on a table.",
+                    {"position_scale": position_scale} if position_scale != 1.0 else {},
+                )
+            )
         elif condition_type == "depth_pred":
             condition_img = (
                 Image.open("assets/vase_hq.jpg")
@@ -166,7 +181,14 @@ class TrainingCallback(L.Callback):
                 .filter(ImageFilter.GaussianBlur(blur_radius))
                 .convert("RGB")
             )
-            test_list.append((condition_img, [0, 0], "A beautiful vase on a table."))
+            test_list.append(
+                (
+                    condition_img,
+                    [0, 0],
+                    "A beautiful vase on a table.",
+                    {"position_scale": position_scale} if position_scale != 1.0 else {},
+                )
+            )
         elif condition_type == "fill":
             condition_img = (
                 Image.open("./assets/vase_hq.jpg")
@@ -189,18 +211,32 @@ class TrainingCallback(L.Callback):
                 .convert("RGB")
             )
             test_list.append((condition_img, [0, -16], "A beautiful vase on a table."))
+        elif condition_type == "cartoon":
+            condition_img = (
+                Image.open("assets/cartoon_boy.png")
+                .resize((condition_size, condition_size))
+                .convert("RGB")
+            )
+            test_list.append(
+                (
+                    condition_img,
+                    [0, -16],
+                    "A cartoon character in a white background. He is looking right, and running.",
+                )
+            )
         else:
             raise NotImplementedError
 
         if not os.path.exists(save_path):
             os.makedirs(save_path)
-        for i, (condition_img, position_delta, prompt) in enumerate(test_list):
+        for i, (condition_img, position_delta, prompt, *others) in enumerate(test_list):
             condition = Condition(
                 condition_type=condition_type,
                 condition=condition_img.resize(
                     (condition_size, condition_size)
                 ).convert("RGB"),
                 position_delta=position_delta,
+                **(others[0] if others else {}),
             )
             res = generate(
                 pl_module.flux_pipe,

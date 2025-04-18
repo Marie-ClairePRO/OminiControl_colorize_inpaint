@@ -7,10 +7,7 @@ import time
 
 from datasets import load_dataset
 
-from .data import (
-    ImageConditionDataset,
-    Subject200KDateset,
-)
+from .data import ImageConditionDataset, Subject200KDataset, CartoonDataset
 from .model import OminiModel
 from .callbacks import TrainingCallback
 
@@ -83,7 +80,7 @@ def main():
             num_proc=16,
             cache_file_name="./cache/dataset/data_valid.arrow",
         )
-        dataset = Subject200KDateset(
+        dataset = Subject200KDataset(
             data_valid,
             condition_size=training_config["dataset"]["condition_size"],
             target_size=training_config["dataset"]["target_size"],
@@ -106,6 +103,19 @@ def main():
             dataset,
             condition_size=training_config["dataset"]["condition_size"],
             target_size=training_config["dataset"]["target_size"],
+            condition_type=training_config["condition_type"],
+            drop_text_prob=training_config["dataset"]["drop_text_prob"],
+            drop_image_prob=training_config["dataset"]["drop_image_prob"],
+            position_scale=training_config["dataset"].get("position_scale", 1.0),
+        )
+    elif training_config["dataset"]["type"] == "cartoon":
+        dataset = load_dataset("saquiboye/oye-cartoon", split="train")
+        dataset = CartoonDataset(
+            dataset,
+            condition_size=training_config["dataset"]["condition_size"],
+            target_size=training_config["dataset"]["target_size"],
+            image_size=training_config["dataset"]["image_size"],
+            padding=training_config["dataset"]["padding"],
             condition_type=training_config["condition_type"],
             drop_text_prob=training_config["dataset"]["drop_text_prob"],
             drop_image_prob=training_config["dataset"]["drop_image_prob"],

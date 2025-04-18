@@ -107,6 +107,7 @@ class OminiModel(L.LightningModule):
         condition_types = batch["condition_type"]
         prompts = batch["description"]
         position_delta = batch["position_delta"][0]
+        position_scale = float(batch.get("position_scale", [1.0])[0])
 
         # Prepare inputs
         with torch.no_grad():
@@ -130,6 +131,13 @@ class OminiModel(L.LightningModule):
             # Add position delta
             condition_ids[:, 1] += position_delta[0]
             condition_ids[:, 2] += position_delta[1]
+
+            if position_scale != 1.0:
+                scale_bias = (position_scale - 1.0) / 2
+                condition_ids[:, 1] *= position_scale
+                condition_ids[:, 2] *= position_scale
+                condition_ids[:, 1] += scale_bias
+                condition_ids[:, 2] += scale_bias
 
             # Prepare condition type
             condition_type_ids = torch.tensor(

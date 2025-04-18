@@ -19,7 +19,7 @@
 > and 
 > [Xinchao Wang](https://sites.google.com/site/sitexinchaowang/)
 > <br>
-> [Learning and Vision Lab](http://lv-nus.org/), National University of Singapore
+> [xML Lab](https://sites.google.com/view/xml-nus), National University of Singapore
 > <br>
 
 
@@ -93,6 +93,11 @@ python -m src.gradio.gradio_app
   <img src='./assets/demo/scene_variation.jpg'/>
 * Dreambooth dataset:
   <img src='./assets/demo/dreambooth_res.jpg'/>
+* Oye-cartoon finetune:
+  <div float="left">
+    <img src='./assets/demo/man_omini.jpg' width='48%' />
+    <img src='./assets/demo/panda_omini.jpg' width='48%' />
+  </div>
 </details>
 
 ### Spatially aligned control
@@ -128,6 +133,7 @@ python -m src.gradio.gradio_app
 | [`experimental`](https://huggingface.co/Yuanshi/OminiControl/tree/main/experimental) / `subject` | FLUX.1-schnell | The model used in the paper.                                                                             | (512, 512)   |
 | [`omini`](https://huggingface.co/Yuanshi/OminiControl/tree/main/omini) / `subject_512`           | FLUX.1-schnell | The model has been fine-tuned on a larger dataset.                                                       | (512, 512)   |
 | [`omini`](https://huggingface.co/Yuanshi/OminiControl/tree/main/omini) / `subject_1024`          | FLUX.1-schnell | The model has been fine-tuned on a larger dataset and accommodates higher resolution.   (To be released) | (1024, 1024) |
+| [`oye-cartoon`](https://huggingface.co/saquiboye/oye-cartoon)          | FLUX.1-dev | The model has been fine-tuned on [oye-cartoon](https://huggingface.co/datasets/saquiboye/oye-cartoon) dataset by [@saquib764](https://github.com/Saquib764) | (512, 512) |
 
 **Spatial aligned control:**
 | Model                                                                                                     | Base model | Description                                                                | Resolution   |
@@ -154,11 +160,11 @@ Training instructions can be found in this [folder](./train).
 
 ## Citation
 ```
-@article{
-  tan2024omini,
-  title={OminiControl: Minimal and Universal Control for Diffusion Transformer},
-  author={Zhenxiong Tan, Songhua Liu, Xingyi Yang, Qiaochu Xue, and Xinchao Wang},
+@article{tan2024ominicontrol,
+  title={Ominicontrol: Minimal and universal control for diffusion transformer},
+  author={Tan, Zhenxiong and Liu, Songhua and Yang, Xingyi and Xue, Qiaochu and Wang, Xinchao},
   journal={arXiv preprint arXiv:2411.15098},
+  volume={3},
   year={2024}
 }
 ```

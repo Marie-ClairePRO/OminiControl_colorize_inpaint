@@ -79,7 +79,7 @@ You can customize your own task by constructing a new dataset and modifying the 
                 "position_delta": position_delta
             }
     ```
-    **Note:** For spatial control tasks, set the `position_delta` to be `[0, 0]`. For non-spatial control tasks, set `position_delta` to be `[0, condition_width // 16]`.
+    **Note:** For spatial control tasks, set the `position_delta` to be `[0, 0]`. For non-spatial control tasks, set `position_delta` to be `[0, -condition_width // 16]`.
 2. **Condition**:
    
    Add a new condition type in the `Condition` class. (`src/flux/condition.py`)
@@ -128,5 +128,11 @@ You can customize your own task by constructing a new dataset and modifying the 
 
 ## Hardware requirement
 **Note**: Memory optimization (like dynamic T5 model loading) is pending implementation.
+
+**Recommanded**
 - Hardware: 2x NVIDIA H100 GPUs
 - Memory: ~80GB GPU memory
+
+**Minimal**
+- Hardware: 1x NVIDIA L20 GPU
+- Memory: ~48GB GPU memory

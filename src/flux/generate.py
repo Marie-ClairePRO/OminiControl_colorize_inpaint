@@ -137,6 +137,7 @@ def generate(
     model_config: Optional[Dict[str, Any]] = {},
     condition_scale: float = 1.0,
     default_lora: bool = False,
+    image_guidance_scale: float = 1.0,
     **params: dict,
 ):
     model_config = model_config or get_config(config_path).get("model", {})
@@ -303,6 +304,30 @@ def generate(
                 joint_attention_kwargs=self.joint_attention_kwargs,
                 return_dict=False,
             )[0]
+
+            if image_guidance_scale != 1.0:
+                uncondition_latents = condition.encode(self, empty=True)[0]
+                unc_pred = tranformer_forward(
+                    self.transformer,
+                    model_config=model_config,
+                    # Inputs of the condition (new feature)
+                    condition_latents=uncondition_latents if use_condition else None,
+                    condition_ids=condition_ids if use_condition else None,
+                    condition_type_ids=condition_type_ids if use_condition else None,
+                    # Inputs to the original transformer
+                    hidden_states=latents,
+                    # YiYi notes: divide it by 1000 for now because we scale it by 1000 in the transforme rmodel (we should not keep it but I want to keep the inputs same for the model for testing)
+                    timestep=timestep / 1000,
+                    guidance=torch.ones_like(guidance),
+                    pooled_projections=pooled_prompt_embeds,
+                    encoder_hidden_states=prompt_embeds,
+                    txt_ids=text_ids,
+                    img_ids=latent_image_ids,
+                    joint_attention_kwargs=self.joint_attention_kwargs,
+                    return_dict=False,
+                )[0]
+
+                noise_pred = unc_pred + image_guidance_scale * (noise_pred - unc_pred)
 
             # compute the previous noisy sample x_t -> x_t-1
             latents_dtype = latents.dtype

@@ -112,6 +112,12 @@ def attn_forward(
         condition_n = cond_query.shape[2]
         attention_mask[-condition_n:, :-condition_n] = False
         attention_mask[:-condition_n, -condition_n:] = False
+    elif model_config.get("independent_condition", False):
+        attention_mask = torch.ones(
+            query.shape[2], key.shape[2], device=query.device, dtype=torch.bool
+        )
+        condition_n = cond_query.shape[2]
+        attention_mask[-condition_n:, :-condition_n] = False
     if hasattr(attn, "c_factor"):
         attention_mask = torch.zeros(
             query.shape[2], key.shape[2], device=query.device, dtype=query.dtype
