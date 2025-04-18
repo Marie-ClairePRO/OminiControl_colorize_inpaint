@@ -9,7 +9,6 @@ from src.flux.condition import Condition
 from PIL import Image
 from src.flux.generate import generate_inpaint, seed_everything
 
-from huggingface_hub import login
 pipe = FluxInpaintPipeline.from_pretrained("black-forest-labs/FLUX.1-dev", torch_dtype=torch.bfloat16)
 
 torch.cuda.empty_cache()  
